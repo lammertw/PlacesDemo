@@ -10,7 +10,8 @@ import UIKit
 import CoreLocation
 
 //let placesUrl = "http://ns-places-api.elasticbeanstalk.com/api/v2/places"
-let placesUrl = "http://localhost:8080/api/v2/places"
+let placesUrl = "http://nsplacesapinsi-env.elasticbeanstalk.com/api/v2/places"
+//let placesUrl = "http://localhost:8080/api/v2/places"
 
 class PlacesApi {
     

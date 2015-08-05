@@ -14,6 +14,7 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
     @IBOutlet weak var imageView: UIImageView!
     @IBOutlet weak var titleLabel: UILabel!
     @IBOutlet weak var dateLabel: UILabel!
+    @IBOutlet weak var weatherLabel: UILabel!
 
     @IBOutlet weak var sleepImageView: UIImageView!
     @IBOutlet weak var eatImageView: UIImageView!
@@ -21,12 +22,26 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
 
     @IBOutlet weak var appsTableView: UITableView!
 
+    private let classifications = [
+        "CLEAR_NIGHT": "Clear sky",
+        "SNOW": "Snow",
+        "CLEAR_DAY": "Clear sky",
+        "PARTLY_CLOUDY_DAY": "Partly cloudy",
+        "PARTLY_CLOUDY_NIGHT": "Partly cloudy",
+        "RAIN": "Rain",
+        "SLEET": "Sleet",
+        "MIST": "Mist",
+        "WIND": "Wind",
+        "UNKNOWN": "Unknown"
+    ]
+
     var location: PlaceLocation? {
         didSet {
             if let location = location {
+                titleLabel.text = location.name ?? "Some place"
                 if let image = location.infoImages?.first {
                     if let stringUrl = image.link.absoluteString {
-                        if let url = NSURL(string: stringUrl + "?blur=20") {
+                        if let url = NSURL(string: stringUrl + "?blur=15") {
                             imageView.sd_setImageWithURL(url)
                         }
                     }
@@ -36,14 +51,30 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
         }
     }
 
+    private let temperatureFormatter: NSNumberFormatter = {
+        let formatter = NSNumberFormatter()
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = 0
+        return formatter
+    }()
+
     var coordinate: CLLocationCoordinate2D? {
         didSet {
             if let coordinate = coordinate {
-            PlacesApi.placesAroundLocation(CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude), radius: 0, completionHandler: { [weak self] places, error in
-                if let location = places?.first?.locations.first {
-                    self?.location = location
+                PlacesApi.placesAroundLocation(CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude), radius: 0, completionHandler: { [weak self] places, error in
+                    if let location = places?.first?.locations.first {
+                        self?.location = location
+                    }
+                }, types: [PlaceType.City], name: nil)
+                Manager.sharedInstance.request(.GET, "http://ns-common-api.elasticbeanstalk.com/api/v1/weather/\(coordinate.latitude),\(coordinate.longitude)", parameters: nil, encoding: .JSON).responseJSON { [weak self] _, _, result, error in
+                    println(result)
+                    if let weather = ((result as? [String: AnyObject])?["payload"] as? [String: AnyObject])?["currently"] as? [String: AnyObject], let this = self {
+                        if let classification = this.classifications[weather["classification"] as? String ?? "UNKNOWN"], temperature = weather["temp"] as? Double {
+                            let name = this.location?.name ?? "Some place"
+                            this.weatherLabel.text = "\(this.temperatureFormatter.stringFromNumber(temperature)!)°C - \(classification) in \(name)"
+                        }
+                    }
                 }
-            }, types: [PlaceType.City], name: nil)
             }
         }
     }
@@ -100,6 +131,12 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
             }
         }
         return cell
+    }
+
+    func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
+        if let app = location?.apps[indexPath.row]["links"] as? [String: AnyObject] {
+            // TODO try open app or web
+        }
     }
 }
 
